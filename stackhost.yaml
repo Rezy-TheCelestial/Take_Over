@@ -11,7 +11,7 @@ commands:
   package:
     - "nano inxi"
   start:
-    - "python3 Log.py"
+    - "python3 chut.py"
 
 env:
   ENVIRONMENT: "production"
